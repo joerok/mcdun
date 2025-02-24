@@ -1,0 +1,49 @@
+name: Upload to Cloud Storage
+
+on:
+  push:
+    branches:
+      - main # Or whatever branch you want to trigger on
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x' # Or your desired Python version
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt # If you have a requirements.txt
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+      
+      - name: Terraform Init
+        run: terraform -chdir=tf init
+      
+      - name: Get Terraform outputs
+        id: terraform-outputs
+        run: |
+          GCP_WORKLOAD_IDENTITY_PROVIDER=$(terraform -chdir=tf output -raw gcp_workload_identity_provider)
+          GCP_SERVICE_ACCOUNT_EMAIL=$(terraform -chdir=tf output -raw gcp_service_account_email)
+          echo "GCP_WORKLOAD_IDENTITY_PROVIDER=$GCP_WORKLOAD_IDENTITY_PROVIDER" >> $GITHUB_ENV
+          echo "GCP_SERVICE_ACCOUNT_EMAIL=$GCP_SERVICE_ACCOUNT_EMAIL" >> $GITHUB_ENV
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Upload to Cloud Storage
+        run: |
+          python your_upload_script.py
