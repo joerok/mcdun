@@ -10,3 +10,9 @@ def get_bucket(config_file):
 
     storage_client = storage.Client()
     return storage_client.bucket(bucket_name)
+
+def upload_blob(bucket, source_file_name, destination_blob_name):
+    """Uploads a file to the bucket."""
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_filename(source_file_name)
